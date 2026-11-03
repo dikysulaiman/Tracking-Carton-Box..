@@ -1,0 +1,1666 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking Carton Box</title>
+
+<!-- LIBRARY OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<!-- LIBRARY PEMBUAT BARCODE -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+<!-- LIBRARY SCANNER BARCODE -->
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+header {
+    background: #17324d;
+    color: white;
+    padding: 22px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 23px;
+}
+
+header p {
+    margin-bottom: 0;
+    color: #cbd5e1;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 25px auto;
+    padding: 15px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.card h2 {
+    font-size: 28px;
+    margin-bottom: 0;
+}
+
+.wip h2 { color: #16a34a; }
+.hold h2 { color: #d97706; }
+.sortir h2 { color: #dc2626; }
+.sisa h2 { color: #0f766e; }
+
+.menu, .halaman {
+    background: white;
+    padding: 22px;
+    margin-top: 20px;
+    border-radius: 12px;
+}
+
+button {
+    background: #2563eb;
+    color: white;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 5px;
+    font-weight: bold;
+}
+
+button:hover { background: #1d4ed8; }
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.menu-daftar {
+    background: #17324d;
+    width: calc(100% - 10px);
+    text-align: left;
+    padding: 18px;
+    font-size: 16px;
+}
+
+.menu-daftar:hover { background: #254d70; }
+.menu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
+.menu-grid button { width:100%; min-height:64px; margin:0; text-align:left; }
+.tombol-menu { background:#17324d; }
+.tombol-menu:hover { background:#254d70; }
+.panel-keputusan { background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:16px; margin:16px 0; }
+@media(max-width:600px) { .menu-grid { grid-template-columns:1fr; } }
+
+.tabel-container {
+    overflow-x: auto;
+    margin-top: 18px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+}
+
+th, td {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+    font-size: 14px;
+}
+
+th {
+    background: #17324d;
+    color: white;
+}
+
+.kosong {
+    text-align: center;
+    padding: 30px;
+    color: #64748b;
+}
+
+.tersembunyi { display: none; }
+
+.form-group { margin-bottom: 15px; }
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 14px;
+}
+
+.form-group textarea { resize: vertical; }
+
+.kamera, .preview {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.kamera { background: #0f172a; }
+
+.status-ocr {
+    color: #2563eb;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.barcode-svg {
+    max-width: 180px;
+    height: auto;
+}
+
+.status-terdaftar {
+    color: #64748b;
+    font-weight: bold;
+}
+
+.status-wip {
+    color: #16a34a;
+    font-weight: bold;
+}
+
+/* FORM STATUS BARCODE */
+
+.pilihan-status {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.pilihan-status label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #fff;
+}
+
+.pilihan-status label:has(input:checked) {
+    border: 2px solid #2563eb;
+    background: #eff6ff;
+}
+
+.pilihan-status input {
+    width: 18px;
+    height: 18px;
+}
+
+.info-material {
+    background: #f1f5f9;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 15px 0;
+}
+
+.info-material p { margin: 7px 0; }
+
+.keterangan {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.riwayat {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.riwayat-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+
+.riwayat-item:last-child { border-bottom: none; }
+
+/* LABEL BARCODE */
+
+.label-barcode {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 25px;
+    max-width: 450px;
+    margin: 20px auto;
+    text-align: center;
+    background: white;
+}
+
+.label-barcode svg {
+    width: 100%;
+    max-width: 350px;
+    height: auto;
+}
+
+.label-barcode h3 { margin-top: 0; }
+
+@media(max-width:600px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .pilihan-status { grid-template-columns: 1fr; }
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    body { background: white; }
+
+    body * { visibility: hidden !important; }
+
+    #areaCetak,
+    #areaCetak * {
+        visibility: visible !important;
+    }
+
+    #areaCetak {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 90mm;
+        max-width: 90mm;
+        margin: 0;
+        border: 1px solid #000;
+        border-radius: 0;
+        padding: 10mm;
+    }
+
+    #areaCetak svg { max-width: 100%; }
+}
+
+
+/* DASHBOARD REKAP PER PALET */
+.ringkasan-atas { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
+.ringkasan-box { background:#fff; border-radius:10px; padding:15px; border:1px solid #e2e8f0; }
+.ringkasan-box strong { display:block; font-size:24px; margin-top:5px; }
+.tabel-dashboard { min-width:1100px; }
+.badge-status { display:inline-block; padding:5px 8px; border-radius:20px; background:#e2e8f0; font-size:12px; font-weight:bold; }
+.badge-status.ok { background:#dcfce7; color:#166534; }
+.badge-status.warning { background:#fef3c7; color:#92400e; }
+.kartu-info { background:#f1f5f9; border-radius:10px; padding:14px; margin:12px 0; }
+.kartu-info p { margin:7px 0; }
+.form-proses { background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:15px; margin:15px 0; }
+.form-proses h4 { margin-top:0; }
+.hasil-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.hasil-grid .form-group { margin-bottom:8px; }
+.tombol-hijau { background:#15803d; }
+.tombol-hijau:hover { background:#166534; }
+.catatan-kecil { color:#64748b; font-size:12px; line-height:1.5; }
+@media(max-width:600px) {
+  .ringkasan-atas { grid-template-columns:1fr; }
+  .hasil-grid { grid-template-columns:1fr; }
+  .menu, .halaman { padding:15px; }
+  header { padding:18px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>TRACKING CARTON BOX</h1>
+    <p>Sistem Registrasi dan Tracking Material</p>
+</header>
+
+<div class="container">
+
+    <!-- DASHBOARD -->
+    <section id="dashboard">
+        <h2>Dashboard Gudang</h2>
+
+        <h3>Rekap Kondisi Material per Palet</h3>
+        <p class="catatan-kecil">Menampilkan palet yang sudah pernah masuk IN PROCESS dan masih memiliki saldo material aktif. Jumlah palet turunan tetap digabungkan ke palet asal.</p>
+        <div class="tabel-container">
+            <table class="tabel-dashboard">
+                <thead><tr>
+                    <th>Palet Asal</th><th>Qty Awal</th><th>Belum Dialokasikan</th>
+                    <th>IN PROCESS</th><th>SISA</th><th>HOLD</th><th>SORTIR</th>
+                    <th>Diproses</th><th>Normal</th><th>Sortir Mesin</th><th>Reject Mesin</th><th>Retur Supplier</th><th>Validasi</th>
+                </tr></thead>
+                <tbody id="dashboardPalet"><tr><td colspan="13" class="kosong">Belum ada data palet.</td></tr></tbody>
+            </table>
+        </div>
+
+        <div class="menu">
+            <h2>Menu Utama</h2>
+            <div class="menu-grid">
+                <button class="tombol-menu" onclick="bukaRekapPalet()">📊 REKAP KONDISI MATERIAL PER PALET</button>
+                <button class="tombol-menu" onclick="bukaEndProses()">✅ END PROSES</button>
+                <button class="tombol-menu" onclick="bukaDaftarMaterial()">📦 DAFTAR MATERIAL</button>
+                <button class="tombol-menu" onclick="bukaHoldSortir()">⚠️ DAFTAR MATERIAL HOLD & SORTIR</button>
+            </div>
+            <button onclick="bukaRegistrasi()">➕ Registrasi Material</button>
+            <button onclick="bukaScanBarcode()">📷 Scan Barcode</button>
+        </div>
+    </section>
+
+    <!-- DAFTAR MATERIAL -->
+    <section id="halamanMaterial" class="halaman tersembunyi">
+        <h2>DAFTAR MATERIAL</h2>
+        <p>Daftar seluruh palet material yang telah diregistrasi dan tersimpan di gudang.</p>
+
+        <div class="tabel-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Nomor Identitas Material</th>
+                        <th>Nama Material</th>
+                        <th>Tipe Material</th>
+                        <th>Qty Aktif (PCS)</th>
+                        <th>Status</th>
+                        <th>Asal Palet</th>
+                        <th>Barcode</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="daftarPalet">
+                    <tr>
+                        <td colspan="9" class="kosong">
+                            Belum ada data palet material.
+                            <br>
+                            Silakan lakukan registrasi material terlebih dahulu.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <br>
+        <button onclick="kembaliDashboard()">← Kembali ke Dashboard</button>
+    </section>
+
+    <!-- END PROSES -->
+    <section id="halamanEndProses" class="halaman tersembunyi">
+        <h2>END PROSES</h2>
+        <p>Daftar palet yang seluruh saldo aktifnya sudah habis dan proses produksinya telah dicatat.</p>
+        <div class="tabel-container"><table><thead><tr>
+            <th>No.</th><th>Palet Asal</th><th>Nama Material</th><th>Qty Awal</th><th>Total Diproses</th><th>Normal</th><th>Sortir Mesin</th><th>Reject Mesin</th><th>Retur Supplier</th><th>Validasi</th><th>Aksi</th>
+        </tr></thead><tbody id="daftarEndProses"><tr><td colspan="11" class="kosong">Belum ada material selesai proses.</td></tr></tbody></table></div>
+        <br><button onclick="kembaliDashboard()">← Kembali ke Dashboard</button>
+    </section>
+
+    <!-- DAFTAR HOLD DAN SORTIR -->
+    <section id="halamanHoldSortir" class="halaman tersembunyi">
+        <h2>DAFTAR MATERIAL HOLD & SORTIR</h2>
+        <p>Material yang menunggu pemeriksaan. Material layak dapat masuk Daftar Material sebagai SISA, sedangkan material tidak layak diretur ke Supplier Material (Departemen Carton Box).</p>
+        <div class="tabel-container"><table><thead><tr>
+            <th>No.</th><th>Barcode Material</th><th>Nama Material</th><th>HOLD (PCS)</th><th>SORTIR (PCS)</th><th>Asal Palet</th><th>Total Menunggu</th><th>Aksi</th>
+        </tr></thead><tbody id="daftarHoldSortir"><tr><td colspan="8" class="kosong">Belum ada material HOLD atau SORTIR.</td></tr></tbody></table></div>
+        <div id="panelKeputusanMaterial" class="panel-keputusan tersembunyi">
+            <h3>KEPUTUSAN MATERIAL</h3><p id="infoKeputusanMaterial"></p>
+            <div class="form-group"><label>Jumlah layak digunakan (PCS) — masuk Daftar Material sebagai SISA</label><input type="number" id="jumlahLayak" min="0" step="1" value="0"></div>
+            <div class="form-group"><label>Jumlah tidak layak — retur ke Departemen Carton Box (PCS)</label><input type="number" id="jumlahRetur" min="0" step="1" value="0"></div>
+            <div class="form-group"><label>Alasan / catatan pemeriksaan</label><textarea id="alasanKeputusan" rows="3" placeholder="Contoh: kerusakan, dimensi tidak sesuai, hasil pemeriksaan..."></textarea></div>
+            <p class="catatan-kecil">Jumlah keputusan tidak boleh melebihi saldo HOLD/SORTIR. Sisa yang belum diputuskan tetap berada di menu ini.</p>
+            <button class="tombol-hijau" onclick="simpanKeputusanMaterial()">SIMPAN KEPUTUSAN</button><button type="button" onclick="tutupPanelKeputusan()">BATAL</button>
+        </div>
+        <br><button onclick="kembaliDashboard()">← Kembali ke Dashboard</button>
+    </section>
+
+    <!-- REGISTRASI -->
+    <section id="halamanRegistrasi" class="halaman tersembunyi">
+        <h2>REGISTRASI MATERIAL</h2>
+        <p>Foto label material untuk membaca nomor identitas menggunakan OCR bertahap. Pastikan label terlihat jelas, tidak miring, tidak buram, dan seluruh bagian tulisan masuk ke dalam foto.</p>
+
+        <hr>
+        <h3>1. Ambil Foto Label Material</h3>
+
+        <div class="form-group">
+            <button type="button" onclick="bukaKamera()">📷 Buka Kamera</button>
+            <button type="button" onclick="ambilFoto()">Ambil Foto</button>
+
+            <video id="kamera" class="kamera" autoplay playsinline style="display:none"></video>
+            <canvas id="kanvas" style="display:none"></canvas>
+            <img id="preview" class="preview" style="display:none">
+        </div>
+
+        <div class="form-group">
+            <label>Atau Pilih Foto dari Komputer / HP</label>
+            <input type="file" id="fotoFile" accept="image/*">
+        </div>
+
+        <hr>
+        <h3>2. Pembacaan Tulisan Label (OCR)</h3>
+
+        <button type="button" onclick="bacaOCR()">🔍 BACA TULISAN LABEL (OCR OPTIMAL)</button>
+        <p class="catatan-kecil">OCR membaca tiga area khusus label: angka besar paling atas untuk Nomor Identitas Material, isi kolom Description untuk Nama Material, dan nilai Quantity / Pallet untuk Qty. Angka Order Qty tidak digunakan. Semua kolom tetap bisa dikoreksi manual sebelum disimpan.</p>
+        <p id="statusOCR" class="status-ocr"></p>
+
+        <div class="form-group">
+            <label>Hasil Pembacaan OCR</label>
+            <textarea id="hasilOCR" rows="5" placeholder="Hasil pembacaan tulisan akan muncul di sini..."></textarea>
+        </div>
+
+        <hr>
+        <h3>3. Verifikasi Data Material</h3>
+        <p>Periksa kembali data sebelum menyimpan material.</p>
+
+        <div class="form-group">
+            <label>Nomor Identitas Material</label>
+            <input type="text" id="nomorIdentitas" placeholder="Masukkan nomor identitas material">
+        </div>
+
+        <div class="form-group">
+            <label>Nama Material</label>
+            <input type="text" id="namaMaterial" placeholder="Masukkan nama material">
+        </div>
+
+        <div class="form-group">
+            <label>Tipe Material</label>
+            <select id="tipeMaterial" required>
+                <option value="">Pilih tipe material</option>
+                <option value="BADAN">BADAN</option>
+                <option value="TUTUP">TUTUP</option>
+            </select>
+            <small class="catatan-kecil">Pilih apakah material carton box ini merupakan BADAN atau TUTUP. Tipe akan ikut tersimpan dan tampil di Daftar Material.</small>
+        </div>
+
+        <div class="form-group">
+            <label>Jumlah / Qty (PCS)</label>
+            <input type="number" id="qtyMaterial" min="1" step="1" placeholder="Masukkan jumlah material">
+        </div>
+
+        <button type="button" onclick="simpanMaterial()">💾 SIMPAN MATERIAL</button>
+        <button type="button" onclick="kembaliDashboard()">← Kembali ke Dashboard</button>
+    </section>
+
+    <!-- CETAK BARCODE -->
+    <section id="halamanCetakBarcode" class="halaman tersembunyi">
+        <h2>CETAK BARCODE MATERIAL</h2>
+        <p>Periksa data material sebelum mencetak barcode.</p>
+
+        <div id="areaCetak" class="label-barcode">
+            <h3 id="cetakNama">Nama Material</h3>
+            <p>Nomor Identitas / Palet: <strong id="cetakNomor"></strong></p>
+            <p>Qty Aktif: <strong id="cetakQty"></strong> PCS</p>
+            <svg id="barcodePreview"></svg>
+            <p style="font-size:12px;">TRACKING CARTON BOX</p>
+        </div>
+
+        <button onclick="cetakBarcodeSekarang()">🖨 CETAK BARCODE</button>
+        <button onclick="bukaDaftarMaterial()">← Kembali ke Daftar Material</button>
+    </section>
+
+    <!-- SCAN BARCODE -->
+    <section id="halamanScan" class="halaman tersembunyi">
+        <h2>SCAN BARCODE MATERIAL</h2>
+        <p>Pindai barcode palet untuk mencatat status dan jumlah material.</p>
+
+        <hr>
+        <h3>1. Pindai Barcode</h3>
+
+        <button type="button" onclick="bukaKameraScan()">📷 Buka Scanner</button>
+        <button type="button" onclick="tutupKameraScan()">Tutup Scanner</button>
+
+        <video id="kameraScan" class="kamera" autoplay playsinline muted style="display:none"></video>
+
+        <p id="statusScan" class="status-ocr"></p>
+
+        <div class="form-group">
+            <label>Atau Masukkan Nomor Barcode</label>
+            <input type="text" id="inputBarcode" placeholder="Masukkan nomor barcode material">
+        </div>
+
+        <button type="button" onclick="prosesScanManual()">CARI MATERIAL</button>
+
+        <hr>
+
+        <div id="hasilScan" class="tersembunyi">
+            <h3>2. Data Material Ditemukan</h3>
+
+            <div class="info-material">
+                <p><strong>Nomor Palet:</strong> <span id="scanNomor"></span></p>
+                <p><strong>Nama Material:</strong> <span id="scanNama"></span></p>
+                <p><strong>Qty Aktif:</strong> <span id="scanQty"></span> PCS</p>
+                <p><strong>Status Saat Ini:</strong> <span id="scanStatus"></span></p>
+            </div>
+
+            <hr>
+            <h3>3. FORM PENCATATAN STATUS MATERIAL</h3>
+            <p>Pilih kondisi atau proses yang akan dicatat untuk palet ini.</p>
+
+            <div class="pilihan-status">
+                <label><input type="radio" name="statusMaterial" value="IN PROCESS" checked> IN PROCESS</label>
+                <label><input type="radio" name="statusMaterial" value="SISA"> SISA</label>
+                <label><input type="radio" name="statusMaterial" value="HOLD"> HOLD</label>
+                <label><input type="radio" name="statusMaterial" value="SORTIR"> SORTIR</label>
+                <label><input type="radio" name="statusMaterial" value="HABIS"> HABIS / SELESAI PROSES</label>
+            </div>
+
+            <div id="formPerpindahan" class="form-proses">
+                <h4>Perpindahan Kondisi Material</h4>
+                <div class="form-group">
+                    <label>Ambil jumlah dari kondisi</label>
+                    <select id="sumberStatus">
+                        <option value="belum">BELUM DIALOKASIKAN</option>
+                        <option value="inProcess">IN PROCESS</option>
+                        <option value="sisa">SISA</option>
+                        <option value="hold">HOLD</option>
+                        <option value="sortir">SORTIR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Jumlah yang dipindahkan (PCS)</label>
+                    <input type="number" id="jumlahPindah" min="1" step="1" placeholder="Masukkan jumlah PCS">
+                    <p class="catatan-kecil">Jika tujuan IN PROCESS, jumlah otomatis mengikuti seluruh saldo pada kondisi sumber sehingga tidak perlu diisi manual. Untuk tujuan lain, jumlah dapat diisi atau disesuaikan. HOLD dan SORTIR akan dibuat sebagai palet turunan dengan barcode baru.</p>
+                </div>
+            </div>
+
+            <div id="formHabis" class="form-proses tersembunyi">
+                <h4>FORM HASIL PRODUKSI MESIN</h4>
+                <p class="catatan-kecil">HABIS adalah catatan bahwa material sudah diproses, bukan stok. Jumlah yang diproses diambil dari saldo IN PROCESS.</p>
+                <div class="form-group">
+                    <label>Jumlah IN PROCESS yang diproses (PCS)</label>
+                    <input type="number" id="jumlahDiproses" min="1" step="1" placeholder="Jumlah yang diproses">
+                </div>
+                <div class="hasil-grid">
+                    <div class="form-group">
+                        <label>Hasil Normal (PCS)</label>
+                        <input type="number" id="hasilNormal" min="0" step="1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Hasil Sortir Mesin (PCS)</label>
+                        <input type="number" id="hasilSortirMesin" min="0" step="1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Reject Mesin (PCS)</label>
+                        <input type="number" id="hasilRejectMesin" min="0" step="1" value="0">
+                    </div>
+                </div>
+                <p id="validasiHasilMesin" class="catatan-kecil">Total hasil normal + sortir + reject harus sama dengan jumlah yang diproses.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Catatan (Opsional)</label>
+                <textarea id="catatanStatus" rows="3" placeholder="Tambahkan keterangan jika diperlukan..."></textarea>
+            </div>
+
+            <button type="button" onclick="simpanStatusMaterial()">💾 KIRIM DATA</button>
+
+            <hr>
+            <div class="riwayat">
+                <h3>RIWAYAT PALET INI</h3>
+                <div id="daftarRiwayat">Belum ada riwayat.</div>
+            </div>
+        </div>
+
+        <br>
+        <button onclick="kembaliDashboard()">← Kembali ke Dashboard</button>
+    </section>
+</div>
+
+<script>
+// ======================================
+// TRACKING CARTON BOX - SISTEM PER PALET
+// ======================================
+
+let dataMaterial = [];
+let kameraAktif = null;
+let fotoTerpilih = null;
+let materialSedangDiproses = null;
+let materialUntukCetak = null;
+let materialKeputusanId = null;
+let pembacaBarcode = null;
+let kontrolScanner = null;
+let scanBerjalan = false;
+
+const STATUS_SALDO = ["belum", "inProcess", "sisa", "hold", "sortir"];
+const LABEL_STATUS = {
+    belum: "BELUM DIALOKASIKAN",
+    inProcess: "IN PROCESS",
+    sisa: "SISA",
+    hold: "HOLD",
+    sortir: "SORTIR"
+};
+
+function buatId() {
+    return "palet-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+function angkaValid(nilai) {
+    const n = Number(nilai);
+    return Number.isFinite(n) && Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+function totalSaldo(item) {
+    if (!item || !item.saldo) return 0;
+    return STATUS_SALDO.reduce((total, key) => total + angkaValid(item.saldo[key]), 0);
+}
+
+function statusRingkas(item) {
+    const aktif = STATUS_SALDO.filter(key => angkaValid(item.saldo[key]) > 0);
+    if (aktif.length > 1) return "MULTI KONDISI";
+    if (aktif.length === 1) return LABEL_STATUS[aktif[0]];
+    return angkaValid(item.diproses) > 0 ? "SELESAI PROSES" : "KOSONG";
+}
+
+function perbaruiQtyKompatibel(item) {
+    item.qty = totalSaldo(item);
+    item.status = statusRingkas(item);
+}
+
+function normalisasiSatuMaterial(item) {
+    if (!item.id) item.id = buatId();
+    if (!item.rootId) item.rootId = item.id;
+    if (item.parentId === undefined) item.parentId = null;
+    if (!item.barcode) item.barcode = item.nomor || item.id;
+    if (!item.tipeMaterial) item.tipeMaterial = "BELUM DITENTUKAN";
+    if (!Array.isArray(item.riwayat)) item.riwayat = [];
+    item.returQty = angkaValid(item.returQty);
+
+    const qtyAwal = angkaValid(item.qtyAwal !== undefined ? item.qtyAwal : item.qty);
+    item.qtyAwal = qtyAwal;
+
+    if (!item.saldo || typeof item.saldo !== "object") {
+        const qtyLama = Math.min(qtyAwal, angkaValid(item.qty));
+        item.saldo = { belum: 0, inProcess: 0, sisa: 0, hold: 0, sortir: 0 };
+        const statusLama = String(item.status || "TERDAFTAR").toUpperCase();
+        if (statusLama === "WIP" || statusLama === "IN PROCESS") item.saldo.inProcess = qtyLama;
+        else if (statusLama === "SISA") item.saldo.sisa = qtyLama;
+        else if (statusLama === "HOLD") item.saldo.hold = qtyLama;
+        else if (statusLama === "SORTIR") item.saldo.sortir = qtyLama;
+        else if (statusLama === "HABIS") item.saldo.belum = 0;
+        else item.saldo.belum = qtyLama;
+
+        const sudahDiprosesLama = Math.max(0, qtyAwal - qtyLama);
+        item.diproses = sudahDiprosesLama;
+        item.produksi = {
+            normal: 0,
+            sortir: 0,
+            reject: 0,
+            belumDirinci: sudahDiprosesLama
+        };
+        item.migrasiDataLama = true;
+    } else {
+        STATUS_SALDO.forEach(key => item.saldo[key] = angkaValid(item.saldo[key]));
+        item.diproses = angkaValid(item.diproses);
+        if (!item.produksi) item.produksi = { normal: 0, sortir: 0, reject: 0, belumDirinci: 0 };
+        item.produksi.normal = angkaValid(item.produksi.normal);
+        item.produksi.sortir = angkaValid(item.produksi.sortir);
+        item.produksi.reject = angkaValid(item.produksi.reject);
+        item.produksi.belumDirinci = angkaValid(item.produksi.belumDirinci);
+    }
+    if (item.pernahInProcess === undefined) {
+        item.pernahInProcess = item.saldo.inProcess > 0 || item.diproses > 0 ||
+            item.riwayat.some(r => String(r.statusBaru || "").toUpperCase() === "IN PROCESS");
+    }
+    perbaruiQtyKompatibel(item);
+}
+
+function muatDataMaterial() {
+    try {
+        const tersimpan = JSON.parse(localStorage.getItem("dataMaterial") || "[]");
+        dataMaterial = Array.isArray(tersimpan) ? tersimpan : [];
+        dataMaterial.forEach(normalisasiSatuMaterial);
+        simpanKePenyimpanan();
+    } catch (error) {
+        console.error("Gagal membaca data material:", error);
+        dataMaterial = [];
+    }
+}
+
+function simpanKePenyimpanan() {
+    dataMaterial.forEach(perbaruiQtyKompatibel);
+    localStorage.setItem("dataMaterial", JSON.stringify(dataMaterial));
+}
+
+function akarMaterial(item) {
+    if (!item) return null;
+    return dataMaterial.find(x => x.id === item.rootId) || item;
+}
+
+function anggotaPaletAsal(rootId) {
+    return dataMaterial.filter(item => item.rootId === rootId);
+}
+
+function ringkasanKeluarga(root) {
+    const anggota = anggotaPaletAsal(root.id);
+    const hasil = {
+        qtyAwal: angkaValid(root.qtyAwal),
+        belum: 0, inProcess: 0, sisa: 0, hold: 0, sortir: 0,
+        diproses: 0, normal: 0, sortirMesin: 0, reject: 0, belumDirinci: 0, retur: 0
+    };
+    anggota.forEach(item => {
+        STATUS_SALDO.forEach(key => hasil[key] += angkaValid(item.saldo[key]));
+        hasil.diproses += angkaValid(item.diproses);
+        hasil.normal += angkaValid(item.produksi.normal);
+        hasil.sortirMesin += angkaValid(item.produksi.sortir);
+        hasil.reject += angkaValid(item.produksi.reject);
+        hasil.belumDirinci += angkaValid(item.produksi.belumDirinci);
+        hasil.retur += angkaValid(item.returQty);
+    });
+    hasil.totalTerjelaskan = hasil.belum + hasil.inProcess + hasil.sisa + hasil.hold + hasil.sortir + hasil.diproses + hasil.retur;
+    hasil.valid = hasil.totalTerjelaskan === hasil.qtyAwal;
+    hasil.aktif = hasil.belum + hasil.inProcess + hasil.sisa + hasil.hold + hasil.sortir;
+    return hasil;
+}
+
+// ======================================
+// PINDAH HALAMAN
+// ======================================
+function sembunyikanSemuaHalaman() {
+    ["dashboard", "halamanMaterial", "halamanEndProses", "halamanHoldSortir", "halamanRegistrasi", "halamanScan", "halamanCetakBarcode"].forEach(id => {
+        document.getElementById(id).classList.add("tersembunyi");
+    });
+}
+
+function bukaRegistrasi() {
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanRegistrasi").classList.remove("tersembunyi");
+}
+
+function bukaRekapPalet() {
+    sembunyikanSemuaHalaman();
+    document.getElementById("dashboard").classList.remove("tersembunyi");
+    perbaruiDashboard();
+    document.getElementById("dashboard").scrollIntoView({behavior:"smooth"});
+}
+
+function bukaDaftarMaterial() {
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanMaterial").classList.remove("tersembunyi");
+    tampilkanMaterial();
+}
+
+function bukaEndProses() {
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanEndProses").classList.remove("tersembunyi");
+    tampilkanEndProses();
+}
+
+function bukaHoldSortir() {
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanHoldSortir").classList.remove("tersembunyi");
+    tampilkanHoldSortir();
+}
+
+function bukaScanBarcode() {
+    tutupKameraScan();
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanScan").classList.remove("tersembunyi");
+    document.getElementById("hasilScan").classList.add("tersembunyi");
+    document.getElementById("inputBarcode").value = "";
+    document.getElementById("statusScan").textContent = "";
+    materialSedangDiproses = null;
+}
+
+function kembaliDashboard() {
+    tutupKamera();
+    tutupKameraScan();
+    sembunyikanSemuaHalaman();
+    document.getElementById("dashboard").classList.remove("tersembunyi");
+    perbaruiDashboard();
+}
+
+// ======================================
+// KAMERA OCR
+// ======================================
+async function bukaKamera() {
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Kamera membutuhkan HTTPS atau localhost. Silakan gunakan pilihan foto dari galeri.");
+            return;
+        }
+        tutupKamera();
+        kameraAktif = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+        const video = document.getElementById("kamera");
+        video.srcObject = kameraAktif;
+        video.style.display = "block";
+        await video.play();
+    } catch (error) {
+        console.error("Error kamera OCR:", error);
+        alert("Kamera tidak dapat dibuka: " + error.name + "\n" + error.message);
+    }
+}
+
+function tutupKamera() {
+    if (kameraAktif) {
+        kameraAktif.getTracks().forEach(track => track.stop());
+        kameraAktif = null;
+    }
+    const video = document.getElementById("kamera");
+    if (video) { video.pause(); video.srcObject = null; video.style.display = "none"; }
+}
+
+function ambilFoto() {
+    const video = document.getElementById("kamera");
+    const canvas = document.getElementById("kanvas");
+    if (!kameraAktif || !video.videoWidth) {
+        alert("Silakan buka kamera terlebih dahulu.");
+        return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+        if (!blob) { alert("Gagal mengambil foto."); return; }
+        fotoTerpilih = blob;
+        tampilkanFoto(URL.createObjectURL(blob));
+        tutupKamera();
+    }, "image/jpeg", 0.9);
+}
+
+document.getElementById("fotoFile").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { alert("File yang dipilih harus berupa gambar."); return; }
+    fotoTerpilih = file;
+    tampilkanFoto(URL.createObjectURL(file));
+});
+
+function tampilkanFoto(foto) {
+    const preview = document.getElementById("preview");
+    preview.src = foto;
+    preview.style.display = "block";
+}
+
+// ======================================
+// OCR BERTAHAP + PERBAIKAN GAMBAR
+// ======================================
+async function muatGambarUntukOCR(file) {
+    if (window.createImageBitmap) {
+        try { return await createImageBitmap(file); } catch (e) { console.warn("createImageBitmap tidak tersedia untuk foto ini", e); }
+    }
+    return await new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Foto tidak dapat dibuka.")); };
+        img.src = url;
+    });
+}
+
+async function siapkanVariasiFotoOCR(file) {
+    const img = await muatGambarUntukOCR(file);
+    const lebarAsli = img.width || img.naturalWidth;
+    const tinggiAsli = img.height || img.naturalHeight;
+    if (!lebarAsli || !tinggiAsli) throw new Error("Ukuran foto tidak terbaca.");
+    // Perbesar foto kecil agar karakter pada label lebih mudah dikenali.
+    const skala = Math.min(2.2, Math.max(1, 1800 / lebarAsli));
+    const lebar = Math.min(3200, Math.round(lebarAsli * skala));
+    const tinggi = Math.round(tinggiAsli * (lebar / lebarAsli));
+    const dasar = document.createElement("canvas");
+    dasar.width = lebar; dasar.height = tinggi;
+    const ctx = dasar.getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, lebar, tinggi);
+    ctx.drawImage(img, 0, 0, lebar, tinggi);
+    if (img.close) img.close();
+
+    const asli = document.createElement("canvas");
+    asli.width = lebar; asli.height = tinggi;
+    asli.getContext("2d").drawImage(dasar, 0, 0);
+
+    const enhanced = document.createElement("canvas");
+    enhanced.width = lebar; enhanced.height = tinggi;
+    const ectx = enhanced.getContext("2d", { willReadFrequently: true });
+    ectx.drawImage(dasar, 0, 0);
+    const pixels = ectx.getImageData(0, 0, lebar, tinggi);
+    const d = pixels.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        // Kurangi noise warna dan naikkan kontras tanpa membalik warna tulisan.
+        const value = Math.max(0, Math.min(255, (gray - 128) * 1.45 + 128));
+        d[i] = d[i + 1] = d[i + 2] = value;
+    }
+    ectx.putImageData(pixels, 0, 0);
+
+    const threshold = document.createElement("canvas");
+    threshold.width = lebar; threshold.height = tinggi;
+    const tctx = threshold.getContext("2d", { willReadFrequently: true });
+    tctx.drawImage(enhanced, 0, 0);
+    const bw = tctx.getImageData(0, 0, lebar, tinggi);
+    for (let i = 0; i < bw.data.length; i += 4) {
+        const v = bw.data[i] < 165 ? 0 : 255;
+        bw.data[i] = bw.data[i + 1] = bw.data[i + 2] = v;
+    }
+    tctx.putImageData(bw, 0, 0);
+    // Selain membaca seluruh foto, baca area tetap pada format label Carton Box.
+    // Koordinat relatif terhadap foto: ID di atas, Description di tengah-kanan,
+    // dan Quantity/Pallet di bagian bawah.
+    function potongArea(nama, x, y, w, h) {
+        const crop = document.createElement("canvas");
+        const sx = Math.max(0, Math.round(lebar * x));
+        const sy = Math.max(0, Math.round(tinggi * y));
+        const sw = Math.min(lebar - sx, Math.round(lebar * w));
+        const sh = Math.min(tinggi - sy, Math.round(tinggi * h));
+        const scale = 3;
+        crop.width = Math.max(1, sw * scale);
+        crop.height = Math.max(1, sh * scale);
+        const c = crop.getContext("2d");
+        c.fillStyle = "#fff"; c.fillRect(0, 0, crop.width, crop.height);
+        c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
+        c.drawImage(enhanced, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+        return { nama, canvas: crop, region: true };
+    }
+    return [
+        { nama: "foto asli", canvas: asli },
+        { nama: "kontras ditingkatkan", canvas: enhanced },
+        { nama: "hitam-putih", canvas: threshold },
+        // Area mengikuti tata letak label contoh: angka ID besar di bagian paling atas,
+        // Description pada kolom kanan tabel, dan Quantity/Pallet di bagian bawah.
+        potongArea("area Material ID", 0.18, 0.245, 0.66, 0.105),
+        potongArea("area Description / Nama Material", 0.47, 0.425, 0.47, 0.055),
+        potongArea("area Quantity / Pallet", 0.20, 0.575, 0.68, 0.065)
+    ];
+}
+
+function cariNomorIdentitasOCR(teks) {
+    const baris = String(teks || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    const kandidat = [];
+    for (let i = 0; i < baris.length; i++) {
+        // Cocokkan sepuluh digit walaupun OCR menyisipkan spasi/titik di antaranya.
+        const matches = baris[i].match(/\d(?:[\s.\-]*\d){9,}/g) || [];
+        for (const m of matches) {
+            const digit = m.replace(/\D/g, "");
+            if (digit.length >= 10) {
+                const nomor = digit.slice(0, 10);
+                const konteks = (baris[i - 1] || "") + " " + baris[i] + " " + (baris[i + 1] || "");
+                const bonus = /material|identit|material no|mat\.? no|code|kode/i.test(konteks) ? 25 : 0;
+                kandidat.push({ nomor, skor: bonus + (digit.length === 10 ? 10 : 0), baris: i });
+            }
+        }
+    }
+    kandidat.sort((a, b) => b.skor - a.skor || a.baris - b.baris);
+    return kandidat.length ? kandidat[0].nomor : "";
+}
+
+// Ekstraksi nama material dan jumlah dari beberapa pola label umum.
+// Nilai yang ditemukan hanya mengisi form; pengguna tetap dapat mengoreksinya.
+function normalisasiTeksOCR(teks) {
+    return String(teks || "").replace(/[|]/g, "I").replace(/[：]/g, ":").replace(/\s+/g, " ").trim();
+}
+
+function cariNamaMaterialOCR(teks) {
+    const baris = String(teks || "").split(/\r?\n/).map(normalisasiTeksOCR).filter(Boolean);
+    const polaLabel = /^(?:material\s*(?:name|description|desc|item)?|nama\s*(?:material|barang)?|description|desc(?:ription)?|item\s*name|product\s*name|jenis\s*material)\s*[:#\-]?\s*/i;
+    const kandidat = [];
+    for (let i = 0; i < baris.length; i++) {
+        const line = baris[i];
+        const match = line.match(polaLabel);
+        if (match) {
+            const sisa = line.slice(match[0].length).trim();
+            if (sisa.length >= 3 && !/^[-:|]+$/.test(sisa)) kandidat.push({ nama: sisa, skor: 100 - Math.max(0, sisa.length - 45) });
+            else if (baris[i + 1] && !/^(?:qty|quantity|jumlah|pcs|material\s*(?:no|code|number)|barcode|date)\b/i.test(baris[i + 1])) {
+                kandidat.push({ nama: baris[i + 1], skor: 78 });
+            }
+        }
+    }
+    // Pola label kadang terbaca terpisah sebagai kata "MATERIAL" lalu nama pada baris berikutnya.
+    for (let i = 0; i < baris.length - 1; i++) {
+        if (/^(?:material|description|nama material|item name)\s*[:#\-]?$/i.test(baris[i]) && baris[i + 1].length >= 3) {
+            kandidat.push({ nama: baris[i + 1], skor: 75 });
+        }
+    }
+    kandidat.sort((a, b) => b.skor - a.skor);
+    if (kandidat.length) return kandidat[0].nama.replace(/\s{2,}/g, " ").trim();
+    return "";
+}
+
+function ambilNamaDariAreaDescription(teks) {
+    const baris = String(teks || "").split(/\r?\n/).map(normalisasiTeksOCR).filter(Boolean);
+    for (const line of baris) {
+        const m = line.match(/description\s*[:;=\-]?\s*(.+)$/i);
+        if (m && m[1].trim().length >= 3) return m[1].trim();
+    }
+    // Area crop memang hanya berisi baris Description; bila label kolom terpotong,
+    // ambil baris teks terpanjang dan bukan angka atau metadata.
+    const bersih = baris.map(x => x.replace(/^[^A-Za-z0-9]+/, "").trim())
+        .filter(x => x.length >= 5 && !/^\d+[.,]?\d*$/.test(x)
+            && !/^(?:quantity|pallet|location|customer|order|substance|composition)\b/i.test(x));
+    bersih.sort((a,b) => b.length-a.length);
+    return bersih[0] || "";
+}
+
+function ubahAngkaQtyOCR(raw) {
+    let v = String(raw || "").replace(/[^0-9.,]/g, "");
+    if (!v) return null;
+    // Untuk kuantitas PCS, pemisah ribuan umum berupa titik/koma; desimal dibulatkan.
+    if (/^[0-9]{1,3}(?:[.,][0-9]{3})+$/.test(v)) v = v.replace(/[.,]/g, "");
+    else v = v.replace(/[.,].*$/, "");
+    const n = parseInt(v, 10);
+    return Number.isSafeInteger(n) && n > 0 && n < 100000000 ? n : null;
+}
+
+function cariQtyMaterialOCR(teks) {
+    // HANYA membaca nilai setelah label "Quantity / Pallet".
+    // Order Qty, PC/KAT, dan angka lain pada tabel tidak boleh menjadi fallback.
+    const text = String(teks || "").replace(/\s+/g, " ").trim();
+    const pola = /quantity\s*\/\s*pallet\s*[:;=\-]?\s*([0-9][0-9.,]*)/i;
+    const m = text.match(pola);
+    if (m) return ubahAngkaQtyOCR(m[1]);
+
+    // OCR kadang membaca label dan angka dengan jeda/baris terpisah.
+    const baris = String(teks || "").split(/\r?\n/).map(normalisasiTeksOCR).filter(Boolean);
+    for (let i = 0; i < baris.length; i++) {
+        if (/quantity\s*\/\s*pallet/i.test(baris[i])) {
+            const sesudah = baris[i].replace(/.*quantity\s*\/\s*pallet/i, "");
+            const angka = sesudah.match(/[0-9][0-9.,]*/)
+                || (baris[i + 1] || "").match(/[0-9][0-9.,]*/);
+            if (angka) return ubahAngkaQtyOCR(angka[0]);
+        }
+    }
+    return null;
+}
+
+async function bacaOCR() {
+    if (!fotoTerpilih) { alert("Silakan ambil foto atau pilih foto label terlebih dahulu."); return; }
+    if (typeof Tesseract === "undefined") { alert("Library OCR belum berhasil dimuat. Periksa koneksi internet."); return; }
+    const status = document.getElementById("statusOCR");
+    const hasil = document.getElementById("hasilOCR");
+    const tombol = document.querySelector('button[onclick="bacaOCR()"]');
+    let worker = null;
+    try {
+        tombol.disabled = true;
+        status.textContent = "Menyiapkan foto dan meningkatkan kualitas gambar...";
+        hasil.value = "";
+        const variasi = await siapkanVariasiFotoOCR(fotoTerpilih);
+        status.textContent = "Menyiapkan mesin OCR...";
+        worker = await Tesseract.createWorker("eng", 1, {
+            logger: info => {
+                if (info.status === "recognizing text") {
+                    status.textContent = "OCR sedang membaca: " + Math.round((info.progress || 0) * 100) + "%";
+                } else if (info.status) status.textContent = "OCR: " + info.status;
+            }
+        });
+        try {
+            await worker.setParameters({
+                preserve_interword_spaces: "1",
+                tessedit_pageseg_mode: "6"
+            });
+        } catch (e) { console.warn("Pengaturan OCR tambahan tidak diterapkan", e); }
+
+        const hasilPercobaan = [];
+        for (let i = 0; i < variasi.length; i++) {
+            status.textContent = "Membaca " + variasi[i].nama + " (percobaan " + (i + 1) + "/" + variasi.length + ")...";
+            await worker.setParameters({ tessedit_pageseg_mode: variasi[i].nama.includes("Description") ? "6" : (variasi[i].region ? "7" : "6"), preserve_interword_spaces: "1" });
+            const baca = await worker.recognize(variasi[i].canvas);
+            const teks = (baca.data.text || "").trim();
+            const confidence = Number(baca.data.confidence || 0);
+            // Setiap kolom hanya diekstrak dari area label miliknya sendiri.
+            const isID = variasi[i].nama.includes("Material ID");
+            const isDescription = variasi[i].nama.includes("Description");
+            const isQuantity = variasi[i].nama.includes("Quantity");
+            const nomor = isID ? cariNomorIdentitasOCR(teks) : "";
+            const nama = isDescription ? ambilNamaDariAreaDescription(teks) : "";
+            const qty = isQuantity ? cariQtyMaterialOCR(teks) : null;
+            // Tiap kolom dinilai sendiri agar nama/qty tetap dapat ditemukan dari variasi foto lain.
+            const skor = confidence + (nomor ? 35 : 0) + (nama ? 18 : 0) + (qty !== null ? 18 : 0) + Math.min(teks.length / 100, 5);
+            hasilPercobaan.push({ nama: variasi[i].nama, region: !!variasi[i].region, teks, confidence, nomor, namaMaterial: nama, qty, skor });
+        }
+        hasilPercobaan.sort((a, b) => b.skor - a.skor);
+        const terbaik = hasilPercobaan[0];
+        const gabungan = hasilPercobaan.map((x, i) =>
+            "===== " + x.nama.toUpperCase() + " | AKURASI " + Math.round(x.confidence) + "%" +
+            (x.nomor ? " | KANDIDAT ID: " + x.nomor : " | NOMOR ID BELUM DITEMUKAN") + " =====\n" +
+            (x.teks || "Tidak ada tulisan yang terdeteksi.")
+        ).join("\n\n");
+        hasil.value = gabungan;
+        // Nilai hanya boleh berasal dari crop label yang sesuai; tidak ada fallback
+        // ke foto penuh yang dapat salah mengambil Order Qty atau nama lain.
+        const kandidatNomor = hasilPercobaan
+            .filter(x => x.nama.includes("Material ID") && x.nomor)
+            .sort((a, b) => b.confidence - a.confidence)[0];
+        const kandidatNama = hasilPercobaan
+            .filter(x => x.nama.includes("Description") && x.namaMaterial)
+            .sort((a, b) => b.confidence - a.confidence)[0];
+        const kandidatQty = hasilPercobaan
+            .filter(x => x.nama.includes("Quantity") && x.qty !== null && x.qty !== undefined)
+            .sort((a, b) => b.confidence - a.confidence)[0];
+        if (kandidatNomor) document.getElementById("nomorIdentitas").value = kandidatNomor.nomor;
+        if (kandidatNama) document.getElementById("namaMaterial").value = kandidatNama.namaMaterial;
+        if (kandidatQty) document.getElementById("qtyMaterial").value = kandidatQty.qty;
+
+        const terisi = [kandidatNomor ? "nomor identitas" : "", kandidatNama ? "nama material" : "", kandidatQty ? "jumlah/qty" : ""].filter(Boolean);
+        if (terisi.length) {
+            status.textContent = "Pembacaan selesai. Otomatis terisi: " + terisi.join(", ") + ". Silakan koreksi kolom Nomor Identitas, Nama Material, dan Qty bila ada yang belum tepat sebelum menyimpan.";
+        } else {
+            status.textContent = "Tulisan berhasil dibaca sebagian, tetapi nomor, nama material, dan Qty belum dapat dikenali dengan yakin. Coba foto lebih dekat dan lurus; semua kolom tetap bisa diisi atau dikoreksi manual.";
+        }
+    } catch (error) {
+        console.error("Kesalahan OCR:", error);
+        status.textContent = "OCR gagal: " + (error.message || "Kesalahan tidak diketahui") + ". Coba pilih foto lain atau muat ulang halaman.";
+    } finally {
+        if (worker) { try { await worker.terminate(); } catch (e) { console.warn(e); } }
+        tombol.disabled = false;
+    }
+}
+
+// ======================================
+// REGISTRASI MATERIAL
+// ======================================
+function simpanMaterial() {
+    const nomor = document.getElementById("nomorIdentitas").value.trim();
+    const nama = document.getElementById("namaMaterial").value.trim();
+    const qty = Number(document.getElementById("qtyMaterial").value);
+    const tipe = document.getElementById("tipeMaterial").value;
+    if (!nomor || !nama || !["BADAN", "TUTUP"].includes(tipe) || !Number.isInteger(qty) || qty < 1) {
+        alert("Nomor identitas, nama material, tipe material (BADAN/TUTUP), dan Qty wajib diisi dengan benar.");
+        return;
+    }
+    if (dataMaterial.some(item => String(item.nomor).toLowerCase() === nomor.toLowerCase())) {
+        alert("Nomor identitas material sudah terdaftar.");
+        return;
+    }
+    const id = buatId();
+    const materialBaru = {
+        id, rootId: id, parentId: null,
+        nomor, nama, tipeMaterial: tipe, qty, qtyAwal: qty, barcode: nomor,
+        saldo: { belum: qty, inProcess: 0, sisa: 0, hold: 0, sortir: 0 },
+        diproses: 0, returQty: 0, pernahInProcess: false,
+        produksi: { normal: 0, sortir: 0, reject: 0, belumDirinci: 0 },
+        riwayat: [], waktuUpdate: new Date().toLocaleString("id-ID")
+    };
+    dataMaterial.push(materialBaru);
+    simpanKePenyimpanan();
+    alert("Material berhasil diregistrasi. Barcode menggunakan nomor identitas asli material. Scan barcode untuk mengalokasikan kondisi material.");
+    ["nomorIdentitas", "namaMaterial", "qtyMaterial", "hasilOCR", "tipeMaterial"].forEach(idField => document.getElementById(idField).value = "");
+    document.getElementById("fotoFile").value = "";
+    document.getElementById("preview").style.display = "none";
+    document.getElementById("statusOCR").textContent = "";
+    fotoTerpilih = null;
+    perbaruiDashboard();
+    kembaliDashboard();
+}
+
+// ======================================
+// DAFTAR MATERIAL
+// ======================================
+function tampilkanMaterial() {
+    const tabel = document.getElementById("daftarPalet"); tabel.innerHTML = "";
+    const daftar = dataMaterial.filter(item => angkaValid(item.saldo.belum) > 0 || angkaValid(item.saldo.sisa) > 0);
+    if (!daftar.length) { tabel.innerHTML = '<tr><td colspan="9" class="kosong">Belum ada palet baru masuk atau material SISA.</td></tr>'; return; }
+    daftar.forEach((item, index) => {
+        const baris = document.createElement("tr"), root = akarMaterial(item);
+        const qty = angkaValid(item.saldo.belum) + angkaValid(item.saldo.sisa);
+        const status = item.saldo.sisa > 0 ? (item.saldo.belum > 0 ? "BARU MASUK + SISA" : "SISA") : "BARU MASUK";
+        [index+1,item.nomor,item.nama,item.tipeMaterial || "BELUM DITENTUKAN",qty,status,item.parentId ? (root ? root.nomor : "-") : "PALLET ASAL",item.barcode].forEach(v=>{const td=document.createElement("td");td.textContent=v;baris.appendChild(td);});
+        const aksi=document.createElement("td"), scan=document.createElement("button"), cetak=document.createElement("button");
+        scan.textContent="SCAN / DETAIL"; scan.onclick=()=>{bukaScanBarcode();document.getElementById("inputBarcode").value=item.barcode;cariMaterialBarcode(item.barcode);};
+        cetak.textContent="CETAK LABEL"; cetak.onclick=()=>pilihMaterialUntukCetak(dataMaterial.indexOf(item)); aksi.append(scan,cetak);baris.appendChild(aksi);tabel.appendChild(baris);
+    });
+}
+
+function tampilkanEndProses() {
+    const tabel=document.getElementById("daftarEndProses");tabel.innerHTML="";
+    const akar=dataMaterial.filter(item=>item.id===item.rootId||!item.parentId);
+    const selesai=akar.map(root=>({root,r:ringkasanKeluarga(root)})).filter(x=>x.r.aktif===0&&x.r.diproses>0);
+    if(!selesai.length){tabel.innerHTML='<tr><td colspan="11" class="kosong">Belum ada palet yang selesai diproses.</td></tr>';return;}
+    selesai.forEach((x,i)=>{const r=x.r,tr=document.createElement("tr");
+        [i+1,x.root.nomor,x.root.nama,r.qtyAwal,r.diproses,r.normal,r.sortirMesin,r.reject,r.retur].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td);});
+        const valid=document.createElement("td");valid.innerHTML=r.valid?'<span class="badge-status ok">SEIMBANG</span>':'<span class="badge-status warning">SELISIH</span>';tr.appendChild(valid);
+        const aksi=document.createElement("td"),btn=document.createElement("button");btn.textContent="LIHAT RIWAYAT";btn.onclick=()=>{bukaScanBarcode();document.getElementById("inputBarcode").value=x.root.barcode;cariMaterialBarcode(x.root.barcode);};aksi.appendChild(btn);tr.appendChild(aksi);tabel.appendChild(tr);
+    });
+}
+
+function tampilkanHoldSortir() {
+    const tabel=document.getElementById("daftarHoldSortir");tabel.innerHTML="";
+    const daftar=dataMaterial.filter(item=>angkaValid(item.saldo.hold)+angkaValid(item.saldo.sortir)>0);
+    if(!daftar.length){tabel.innerHTML='<tr><td colspan="8" class="kosong">Belum ada material HOLD atau SORTIR yang menunggu pemeriksaan.</td></tr>';tutupPanelKeputusan();return;}
+    daftar.forEach((item,i)=>{const root=akarMaterial(item),h=angkaValid(item.saldo.hold),s=angkaValid(item.saldo.sortir),tr=document.createElement("tr");
+        [i+1,item.barcode,item.nama,h,s,root?root.nomor:"-",h+s].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td);});
+        const aksi=document.createElement("td"),btn=document.createElement("button");btn.textContent="PERIKSA / PUTUSKAN";btn.onclick=()=>bukaPanelKeputusan(item.id);aksi.appendChild(btn);tr.appendChild(aksi);tabel.appendChild(tr);
+    });
+}
+
+function bukaPanelKeputusan(id) {
+    const item=dataMaterial.find(x=>x.id===id);if(!item){alert("Data material tidak ditemukan.");return;}
+    materialKeputusanId=id;const root=akarMaterial(item),tersedia=angkaValid(item.saldo.hold)+angkaValid(item.saldo.sortir);
+    document.getElementById("infoKeputusanMaterial").textContent="Barcode: "+item.barcode+" | Palet asal: "+(root?root.nomor:"-")+" | HOLD: "+item.saldo.hold+" PCS | SORTIR: "+item.saldo.sortir+" PCS | Total menunggu: "+tersedia+" PCS";
+    document.getElementById("jumlahLayak").value=0;document.getElementById("jumlahRetur").value=0;document.getElementById("alasanKeputusan").value="";
+    document.getElementById("panelKeputusanMaterial").classList.remove("tersembunyi");document.getElementById("panelKeputusanMaterial").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function tutupPanelKeputusan(){materialKeputusanId=null;const p=document.getElementById("panelKeputusanMaterial");if(p)p.classList.add("tersembunyi");}
+function simpanKeputusanMaterial(){
+    const item=dataMaterial.find(x=>x.id===materialKeputusanId);if(!item){alert("Pilih material HOLD/SORTIR terlebih dahulu.");return;}
+    const layak=Number(document.getElementById("jumlahLayak").value),retur=Number(document.getElementById("jumlahRetur").value),catatan=document.getElementById("alasanKeputusan").value.trim(),total=layak+retur,tersedia=angkaValid(item.saldo.hold)+angkaValid(item.saldo.sortir);
+    if(![layak,retur].every(x=>Number.isInteger(x)&&x>=0)||total<=0){alert("Isi jumlah layak atau jumlah retur dengan angka PCS yang benar.");return;}
+    if(total>tersedia){alert("Jumlah keputusan melebihi saldo HOLD/SORTIR yang tersedia ("+tersedia+" PCS).");return;}
+    if(!confirm("Simpan keputusan material?\n\nBarcode: "+item.barcode+"\nLayak digunakan: "+layak+" PCS\nRetur Supplier: "+retur+" PCS\nSisa belum diputuskan: "+(tersedia-total)+" PCS"))return;
+    let ambil=total,ambilHold=Math.min(angkaValid(item.saldo.hold),ambil);item.saldo.hold-=ambilHold;ambil-=ambilHold;item.saldo.sortir-=Math.min(angkaValid(item.saldo.sortir),ambil);
+    item.saldo.sisa+=layak;item.returQty=angkaValid(item.returQty)+retur;
+    const waktu=new Date().toLocaleString("id-ID");tambahRiwayat(item,{waktu,aksi:"KEPUTUSAN HOLD/SORTIR",jumlahLayak:layak,jumlahRetur:retur,jumlahBelumDiputuskan:tersedia-total,tujuanLayak:"DAFTAR MATERIAL - SISA",tujuanRetur:"SUPPLIER MATERIAL - DEPARTEMEN CARTON BOX",catatan});
+    item.waktuUpdate=waktu;simpanKePenyimpanan();alert("Keputusan berhasil disimpan. Material layak masuk Daftar Material sebagai SISA; material tidak layak dicatat sebagai RETUR SUPPLIER.");
+    tutupPanelKeputusan();tampilkanHoldSortir();tampilkanMaterial();perbaruiDashboard();tampilkanEndProses();
+}
+
+// ======================================
+// CETAK BARCODE
+// ======================================
+function pilihMaterialUntukCetak(index) {
+    materialUntukCetak = dataMaterial[index];
+    if (!materialUntukCetak) { alert("Material tidak ditemukan."); return; }
+    if (typeof JsBarcode === "undefined") { alert("Library barcode belum berhasil dimuat. Periksa koneksi internet."); return; }
+    sembunyikanSemuaHalaman();
+    document.getElementById("halamanCetakBarcode").classList.remove("tersembunyi");
+    document.getElementById("cetakNama").textContent = materialUntukCetak.nama;
+    document.getElementById("cetakNomor").textContent = materialUntukCetak.nomor;
+    document.getElementById("cetakQty").textContent = totalSaldo(materialUntukCetak);
+    const barcode = document.getElementById("barcodePreview");
+    barcode.innerHTML = "";
+    JsBarcode(barcode, materialUntukCetak.barcode, { format: "CODE128", width: 2, height: 70, displayValue: true, fontSize: 16, margin: 10 });
+}
+
+function cetakBarcodeSekarang() {
+    if (!materialUntukCetak) { alert("Silakan pilih material terlebih dahulu."); return; }
+    window.print();
+}
+
+// ======================================
+// CARI MATERIAL DARI BARCODE
+// ======================================
+function cariMaterialBarcode(barcode) {
+    const kode = String(barcode || "").trim();
+    if (!kode) { alert("Masukkan atau pindai barcode terlebih dahulu."); return; }
+    const material = dataMaterial.find(item =>
+        String(item.barcode).toLowerCase() === kode.toLowerCase() ||
+        String(item.nomor).toLowerCase() === kode.toLowerCase()
+    );
+    if (!material) {
+        materialSedangDiproses = null;
+        document.getElementById("hasilScan").classList.add("tersembunyi");
+        alert("Barcode tidak ditemukan. Pastikan material sudah diregistrasi.");
+        return;
+    }
+    materialSedangDiproses = material;
+    tampilkanFormScan();
+}
+
+function tampilkanFormScan() {
+    if (!materialSedangDiproses) return;
+    const material = materialSedangDiproses;
+    const root = akarMaterial(material);
+    document.getElementById("scanNomor").textContent = material.nomor + (material.parentId ? " (turunan dari " + (root ? root.nomor : "") + ")" : "");
+    document.getElementById("scanNama").textContent = material.nama;
+    document.getElementById("scanQty").textContent = totalSaldo(material);
+    document.getElementById("scanStatus").textContent = statusRingkas(material);
+    document.getElementById("hasilScan").classList.remove("tersembunyi");
+
+    const opsi = document.querySelector('input[name="statusMaterial"][value="IN PROCESS"]');
+    if (opsi) opsi.checked = true;
+    document.getElementById("jumlahPindah").value = "";
+    document.getElementById("jumlahDiproses").value = anggotaPaletAsal(root.id).reduce((sum, x) => sum + angkaValid(x.saldo.inProcess), 0) || "";
+    document.getElementById("hasilNormal").value = "0";
+    document.getElementById("hasilSortirMesin").value = "0";
+    document.getElementById("hasilRejectMesin").value = "0";
+    document.getElementById("catatanStatus").value = "";
+    perbaruiPilihanSumber();
+    tampilkanInputJumlah();
+    tampilkanRiwayat(material);
+    tampilkanRingkasanKeluargaScan(material);
+}
+
+function tampilkanRingkasanKeluargaScan(material) {
+    const root = akarMaterial(material);
+    const r = ringkasanKeluarga(root);
+    let area = document.getElementById("ringkasanKeluargaScan");
+    if (!area) {
+        area = document.createElement("div");
+        area.id = "ringkasanKeluargaScan";
+        area.className = "kartu-info";
+        document.getElementById("hasilScan").insertBefore(area, document.getElementById("hasilScan").children[2]);
+    }
+    area.innerHTML = "<strong>Rekap seluruh turunan palet asal " + amanTeks(root.nomor) + "</strong>" +
+        "<p>IN PROCESS: " + r.inProcess + " PCS | SISA: " + r.sisa + " PCS | HOLD: " + r.hold + " PCS | SORTIR: " + r.sortir + " PCS</p>" +
+        "<p>Sudah diproses: " + r.diproses + " PCS | Normal: " + r.normal + " | Sortir mesin: " + r.sortirMesin + " | Reject: " + r.reject + " PCS</p>" +
+        "<p>Retur Supplier: " + r.retur + " PCS</p>" +
+        "<p>Saldo + diproses + retur: " + r.totalTerjelaskan + " / " + r.qtyAwal + " PCS</p>";
+}
+
+function amanTeks(teks) {
+    return String(teks).replace(/[&<>"']/g, karakter => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[karakter]));
+}
+
+// ======================================
+// PILIH SUMBER DAN FORM STATUS
+// ======================================
+function perbaruiPilihanSumber() {
+    if (!materialSedangDiproses) return;
+    const select = document.getElementById("sumberStatus");
+    const sebelumnya = select.value;
+    const saldo = materialSedangDiproses.saldo;
+    select.innerHTML = "";
+    STATUS_SALDO.forEach(key => {
+        if (angkaValid(saldo[key]) > 0) {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = LABEL_STATUS[key] + " (tersedia " + saldo[key] + " PCS)";
+            select.appendChild(option);
+        }
+    });
+    if (!select.options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Tidak ada saldo material untuk dipindahkan";
+        select.appendChild(option);
+    } else if ([...select.options].some(o => o.value === sebelumnya)) select.value = sebelumnya;
+}
+
+function perbaruiJumlahOtomatis() {
+    const inputJumlah = document.getElementById("jumlahPindah");
+    if (!inputJumlah || !materialSedangDiproses) return;
+    const pilihan = document.querySelector('input[name="statusMaterial"]:checked');
+    const tujuan = pilihan ? pilihan.value : "IN PROCESS";
+    const sumber = document.getElementById("sumberStatus").value;
+    const saldo = angkaValid(materialSedangDiproses.saldo && materialSedangDiproses.saldo[sumber]);
+    if (tujuan === "IN PROCESS") {
+        inputJumlah.value = saldo > 0 ? saldo : "";
+        inputJumlah.readOnly = true;
+        inputJumlah.title = "Otomatis mengikuti seluruh saldo pada kondisi sumber.";
+        inputJumlah.placeholder = "Terisi otomatis sesuai quantity material";
+    } else {
+        inputJumlah.readOnly = false;
+        inputJumlah.title = "Masukkan jumlah PCS yang akan dipindahkan.";
+        inputJumlah.placeholder = "Masukkan jumlah PCS";
+        if (Number(inputJumlah.value) > saldo) inputJumlah.value = saldo || "";
+    }
+}
+
+function tampilkanInputJumlah() {
+    const pilihan = document.querySelector('input[name="statusMaterial"]:checked');
+    const status = pilihan ? pilihan.value : "IN PROCESS";
+    document.getElementById("formPerpindahan").classList.toggle("tersembunyi", status === "HABIS");
+    document.getElementById("formHabis").classList.toggle("tersembunyi", status !== "HABIS");
+    if (status === "HABIS" && materialSedangDiproses) {
+        const root = akarMaterial(materialSedangDiproses);
+        document.getElementById("jumlahDiproses").value = anggotaPaletAsal(root.id).reduce((sum, x) => sum + angkaValid(x.saldo.inProcess), 0) || "";
+    }
+    perbaruiJumlahOtomatis();
+}
+
+document.querySelectorAll('input[name="statusMaterial"]').forEach(input => input.addEventListener("change", tampilkanInputJumlah));
+document.getElementById("sumberStatus").addEventListener("change", perbaruiJumlahOtomatis);
+
+// ======================================
+// SIMPAN PERPINDAHAN / HASIL PRODUKSI
+// ======================================
+function tambahRiwayat(item, data) {
+    if (!Array.isArray(item.riwayat)) item.riwayat = [];
+    item.riwayat.push(data);
+}
+
+function simpanStatusMaterial() {
+    if (!materialSedangDiproses) { alert("Silakan scan barcode material terlebih dahulu."); return; }
+    const material = materialSedangDiproses;
+    const pilihan = document.querySelector('input[name="statusMaterial"]:checked');
+    if (!pilihan) { alert("Silakan pilih status material."); return; }
+    const statusTujuan = pilihan.value;
+    const catatan = document.getElementById("catatanStatus").value.trim();
+    const waktu = new Date().toLocaleString("id-ID");
+
+    if (statusTujuan === "HABIS") {
+        const qtyProses = Number(document.getElementById("jumlahDiproses").value);
+        const normal = Number(document.getElementById("hasilNormal").value);
+        const sortirMesin = Number(document.getElementById("hasilSortirMesin").value);
+        const reject = Number(document.getElementById("hasilRejectMesin").value);
+        if (!Number.isInteger(qtyProses) || qtyProses <= 0) { alert("Jumlah yang diproses harus berupa angka PCS lebih dari 0."); return; }
+        const rootProses = akarMaterial(material);
+        const keluargaProses = anggotaPaletAsal(rootProses.id);
+        const saldoInProcessKeluarga = keluargaProses.reduce((sum, x) => sum + angkaValid(x.saldo.inProcess), 0);
+        if (qtyProses > saldoInProcessKeluarga) { alert("Jumlah diproses melebihi total saldo IN PROCESS palet asal (" + saldoInProcessKeluarga + " PCS)."); return; }
+        if (![normal, sortirMesin, reject].every(x => Number.isInteger(x) && x >= 0)) { alert("Hasil normal, sortir, dan reject harus berupa angka bulat minimal 0."); return; }
+        const totalHasil = normal + sortirMesin + reject;
+        if (totalHasil !== qtyProses) {
+            alert("Jumlah hasil belum seimbang.\n\nDiproses: " + qtyProses + " PCS\nNormal + Sortir + Reject: " + totalHasil + " PCS\n\nKetiga hasil harus sama dengan jumlah yang diproses.");
+            return;
+        }
+        if (!confirm("Simpan hasil proses mesin?\n\nPalet: " + material.nomor + "\nDiproses: " + qtyProses + " PCS\nNormal: " + normal + " PCS\nSortir mesin: " + sortirMesin + " PCS\nReject mesin: " + reject + " PCS")) return;
+        let sisaDiproses = qtyProses;
+        const urutanAmbil = [material, ...keluargaProses.filter(x => x.id !== material.id)];
+        for (const anggota of urutanAmbil) {
+            if (sisaDiproses <= 0) break;
+            const ambil = Math.min(angkaValid(anggota.saldo.inProcess), sisaDiproses);
+            anggota.saldo.inProcess -= ambil;
+            sisaDiproses -= ambil;
+        }
+        material.diproses += qtyProses;
+        material.produksi.normal += normal;
+        material.produksi.sortir += sortirMesin;
+        material.produksi.reject += reject;
+        material.pernahInProcess = true;
+        tambahRiwayat(material, { waktu, aksi: "HASIL MESIN", jumlahDiproses: qtyProses, normal, sortirMesin, reject, catatan });
+        material.waktuUpdate = waktu;
+        simpanKePenyimpanan();
+        alert("Hasil proses mesin berhasil disimpan. Jumlah IN PROCESS telah dikurangi dan hasil produksi dicatat.");
+    } else {
+        const sumber = document.getElementById("sumberStatus").value;
+        const jumlah = Number(document.getElementById("jumlahPindah").value);
+        if (!sumber || !STATUS_SALDO.includes(sumber)) { alert("Tidak ada saldo sumber yang dapat dipindahkan."); return; }
+        if (!Number.isInteger(jumlah) || jumlah <= 0) { alert("Jumlah perpindahan wajib diisi dengan angka PCS lebih dari 0."); return; }
+        if (jumlah > material.saldo[sumber]) { alert("Jumlah melebihi saldo " + LABEL_STATUS[sumber] + " (" + material.saldo[sumber] + " PCS)."); return; }
+        const tujuan = statusTujuan === "IN PROCESS" ? "inProcess" : statusTujuan.toLowerCase();
+        if (!STATUS_SALDO.includes(tujuan)) { alert("Status tujuan tidak valid."); return; }
+        if (sumber === tujuan) { alert("Kondisi sumber dan tujuan sama. Pilih status tujuan yang berbeda."); return; }
+        const membuatTurunan = tujuan === "hold" || tujuan === "sortir";
+        const pesanTurunan = membuatTurunan ? "\n\nSistem akan membuat palet turunan dengan barcode baru yang terhubung ke palet asal." : "";
+        if (!confirm("Konfirmasi perpindahan material?\n\nPalet: " + material.nomor + "\nDari: " + LABEL_STATUS[sumber] + "\nKe: " + LABEL_STATUS[tujuan] + "\nJumlah: " + jumlah + " PCS" + pesanTurunan)) return;
+
+        material.saldo[sumber] -= jumlah;
+        if (membuatTurunan) {
+            const root = akarMaterial(material);
+            const kodeJenis = tujuan === "hold" ? "H" : "S";
+            let urutan = 1;
+            let barcodeBaru = "";
+            do {
+                barcodeBaru = root.nomor + "-" + kodeJenis + String(urutan).padStart(3, "0");
+                urutan++;
+            } while (dataMaterial.some(x => String(x.barcode).toLowerCase() === barcodeBaru.toLowerCase()));
+            const idBaru = buatId();
+            const materialTurunan = {
+                id: idBaru, rootId: root.id, parentId: material.id,
+                nomor: barcodeBaru, nama: material.nama, tipeMaterial: material.tipeMaterial || (root && root.tipeMaterial) || "BELUM DITENTUKAN",
+                qty: jumlah, qtyAwal: jumlah, barcode: barcodeBaru,
+                saldo: { belum: 0, inProcess: 0, sisa: 0, hold: 0, sortir: 0 },
+                diproses: 0,
+                produksi: { normal: 0, sortir: 0, reject: 0, belumDirinci: 0 },
+                riwayat: [{ waktu, aksi: "DIBUAT DARI PALET ASAL", asal: material.nomor, statusBaru: LABEL_STATUS[tujuan], jumlah, catatan }],
+                waktuUpdate: waktu
+            };
+            materialTurunan.saldo[tujuan] = jumlah;
+            dataMaterial.push(materialTurunan);
+            tambahRiwayat(material, { waktu, aksi: "PEMBUATAN PALET TURUNAN", statusSebelumnya: LABEL_STATUS[sumber], statusBaru: LABEL_STATUS[tujuan], jumlah, barcodeTurunan: barcodeBaru, catatan });
+            alert("Palet turunan berhasil dibuat.\nNomor/barcode baru: " + barcodeBaru + "\nAsal: " + root.nomor + "\nJumlah: " + jumlah + " PCS");
+        } else {
+            material.saldo[tujuan] += jumlah;
+            if (tujuan === "inProcess") material.pernahInProcess = true;
+            tambahRiwayat(material, { waktu, aksi: "PERPINDAHAN KONDISI", statusSebelumnya: LABEL_STATUS[sumber], statusBaru: LABEL_STATUS[tujuan], jumlah, catatan });
+        }
+        material.waktuUpdate = waktu;
+        simpanKePenyimpanan();
+        if (!membuatTurunan) alert("Perpindahan material berhasil disimpan.");
+    }
+
+    perbaruiDashboard();
+    tampilkanMaterial();
+    tampilkanEndProses();
+    tampilkanHoldSortir();
+    tampilkanFormScan();
+}
+
+// ======================================
+// RIWAYAT PALET
+// ======================================
+function tampilkanRiwayat(material) {
+    const area = document.getElementById("daftarRiwayat");
+    area.innerHTML = "";
+    if (!material.riwayat || material.riwayat.length === 0) {
+        area.textContent = "Belum ada riwayat pencatatan untuk palet ini.";
+        return;
+    }
+    [...material.riwayat].reverse().forEach(item => {
+        const baris = document.createElement("div");
+        baris.className = "riwayat-item";
+        const waktu = document.createElement("strong");
+        waktu.textContent = item.waktu || "Waktu tidak tersedia";
+        const detail = document.createElement("p");
+        if (item.aksi === "HASIL MESIN") {
+            detail.textContent = "HASIL MESIN | Diproses " + item.jumlahDiproses + " PCS | Normal " + item.normal + " | Sortir " + item.sortirMesin + " | Reject " + item.reject + " PCS";
+        } else if (item.aksi === "KEPUTUSAN HOLD/SORTIR") {
+            detail.textContent = "KEPUTUSAN HOLD/SORTIR | Layak digunakan: " + (item.jumlahLayak || 0) + " PCS | Retur Supplier: " + (item.jumlahRetur || 0) + " PCS | Belum diputuskan: " + (item.jumlahBelumDiputuskan || 0) + " PCS";
+        } else if (item.aksi) {
+            detail.textContent = item.aksi + " | " + (item.statusSebelumnya || "") + " → " + (item.statusBaru || "") + " | Jumlah: " + (item.jumlah || 0) + " PCS" + (item.barcodeTurunan ? " | Barcode turunan: " + item.barcodeTurunan : "");
+        } else {
+            detail.textContent = (item.statusSebelumnya || "Status lama") + " → " + (item.statusBaru || "Status") + " | Qty: " + (item.qtySebelumnya || 0) + " → " + (item.qtyBaru || 0) + " PCS";
+        }
+        baris.append(waktu, detail);
+        if (item.catatan) {
+            const catatan = document.createElement("p");
+            catatan.textContent = "Catatan: " + item.catatan;
+            baris.appendChild(catatan);
+        }
+        area.appendChild(baris);
+    });
+}
+
+// ======================================
+// SCAN MANUAL
+// ======================================
+function prosesScanManual() {
+    const barcode = document.getElementById("inputBarcode").value;
+    cariMaterialBarcode(barcode);
+}
+
+// ======================================
+// PEMERIKSAAN LIBRARY SCANNER
+// ======================================
+function periksaLibraryScanner() {
+    if (typeof ZXing === "undefined") return { berhasil: false, pesan: "Library ZXing belum berhasil dimuat. Periksa koneksi internet atau CDN." };
+    if (typeof ZXing.BrowserMultiFormatReader !== "function") return { berhasil: false, pesan: "Library ZXing ditemukan, tetapi BrowserMultiFormatReader tidak tersedia." };
+    return { berhasil: true };
+}
+
+// ======================================
+// KAMERA SCANNER BARCODE
+// ======================================
+async function bukaKameraScan() {
+    const status = document.getElementById("statusScan");
+    const video = document.getElementById("kameraScan");
+    const pemeriksaan = periksaLibraryScanner();
+    if (!pemeriksaan.berhasil) { status.textContent = pemeriksaan.pesan; alert(pemeriksaan.pesan); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const pesan = "Browser tidak menyediakan akses kamera. Buka aplikasi melalui HTTPS.";
+        status.textContent = pesan; alert(pesan); return;
+    }
+    try {
+        tutupKameraScan();
+        status.textContent = "Mengaktifkan kamera belakang...";
+        video.style.display = "block";
+        video.setAttribute("playsinline", "true");
+        video.muted = true;
+        pembacaBarcode = new ZXing.BrowserMultiFormatReader();
+        const daftarKamera = await pembacaBarcode.listVideoInputDevices();
+        if (!daftarKamera || !daftarKamera.length) throw new Error("Tidak ada kamera yang terdeteksi pada perangkat.");
+        let kameraDipilih = daftarKamera.find(k => /back|rear|environment|belakang/i.test(k.label)) || daftarKamera[daftarKamera.length - 1];
+        status.textContent = "Kamera aktif. Arahkan barcode ke kamera dan pastikan barcode terlihat jelas.";
+        scanBerjalan = true;
+        kontrolScanner = await pembacaBarcode.decodeFromVideoDevice(kameraDipilih.deviceId, video, (result, error) => {
+            if (!scanBerjalan) return;
+            if (result) {
+                const kode = result.getText();
+                if (!kode) return;
+                scanBerjalan = false;
+                document.getElementById("inputBarcode").value = kode;
+                status.textContent = "Barcode berhasil terbaca: " + kode;
+                tutupKameraScan();
+                cariMaterialBarcode(kode);
+            }
+        });
+        if (video.paused) await video.play().catch(() => {});
+    } catch (error) {
+        console.error("DETAIL ERROR SCANNER:", error);
+        tutupKameraScan();
+        let pesan = "Scanner gagal dibuka.\n\n";
+        if (error.name === "NotAllowedError") pesan += "Izin kamera ditolak. Izinkan akses kamera pada pengaturan Chrome.";
+        else if (error.name === "NotFoundError") pesan += "Kamera tidak ditemukan pada perangkat.";
+        else if (error.name === "NotReadableError") pesan += "Kamera sedang digunakan aplikasi lain atau tidak dapat diakses.";
+        else if (error.name === "OverconstrainedError") pesan += "Pengaturan kamera tidak cocok dengan perangkat.";
+        else pesan += "Jenis error: " + (error.name || "Tidak diketahui") + "\nKeterangan: " + (error.message || "Tidak ada keterangan tambahan.");
+        status.textContent = pesan.replace(/\n/g, " ");
+        alert(pesan);
+    }
+}
+
+function tutupKameraScan() {
+    scanBerjalan = false;
+    if (kontrolScanner) {
+        try { kontrolScanner.stop(); } catch (error) { console.warn(error); }
+        kontrolScanner = null;
+    }
+    if (pembacaBarcode) {
+        try { pembacaBarcode.reset(); } catch (error) { console.warn(error); }
+        pembacaBarcode = null;
+    }
+    const video = document.getElementById("kameraScan");
+    if (video) {
+        if (video.srcObject) video.srcObject.getTracks().forEach(track => track.stop());
+        video.pause();
+        video.srcObject = null;
+        video.style.display = "none";
+    }
+}
+
+// ======================================
+// DASHBOARD REKAP PER PALET ASAL
+// ======================================
+function perbaruiDashboard() {
+    const akar=dataMaterial.filter(item=>!item.parentId||item.id===item.rootId),tbody=document.getElementById("dashboardPalet");tbody.innerHTML="";
+    const tampil=akar.map(root=>({root,r:ringkasanKeluarga(root)})).filter(x=>(x.root.pernahInProcess||x.r.inProcess>0||x.r.diproses>0)&&x.r.aktif>0);
+    if(!tampil.length){tbody.innerHTML='<tr><td colspan="13" class="kosong">Belum ada palet yang masuk IN PROCESS dan masih memiliki saldo aktif.</td></tr>';return;}
+    tampil.forEach(x=>{const r=x.r,tr=document.createElement("tr");
+        [x.root.nomor,r.qtyAwal,r.belum,r.inProcess,r.sisa,r.hold,r.sortir,r.diproses,r.normal,r.sortirMesin,r.reject,r.retur].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td);});
+        const valid=document.createElement("td");valid.innerHTML=r.valid?'<span class="badge-status ok">SEIMBANG</span>':'<span class="badge-status warning">SELISIH</span>';tr.appendChild(valid);tbody.appendChild(tr);
+    });
+}
+
+// ======================================
+// SAAT APLIKASI DIBUKA
+// ======================================
+muatDataMaterial();
+perbaruiDashboard();
+tampilkanMaterial();
+tampilkanEndProses();
+tampilkanHoldSortir();
+
+</script>
+
+</body>
+</html>
